@@ -1,0 +1,19 @@
+{
+  "name": "pingroom-starter-quiet-hours-outbox",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Queue PingRoom notifications locally until configured quiet hours end.",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node scripts/outbox.mjs drain",
+    "enqueue": "node scripts/outbox.mjs enqueue",
+    "status": "node scripts/outbox.mjs status",
+    "resolve": "node scripts/outbox.mjs resolve",
+    "connect": "node scripts/connect.mjs",
+    "demo": "node scripts/demo.mjs",
+    "test": "node --test"
+  },
+  "dependencies": { "@pingroom/cli": "0.12.0" }
+}

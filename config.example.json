@@ -1,0 +1,6 @@
+{
+  "timeZone": "America/New_York",
+  "quietStart": "22:00",
+  "quietEnd": "08:00",
+  "stateDirectory": ".outbox"
+}
