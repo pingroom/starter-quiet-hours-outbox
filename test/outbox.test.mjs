@@ -71,6 +71,40 @@ test('job parsing rejects duplicate escaped keys, extra fields, malformed dates,
   assert.equal(jobHash(reordered), jobHash(valid));
 });
 
+test('flat string parsing preserves whitespace, key order and JSON escapes', () => {
+  const source = String.raw`{
+    "message": "quote: \"; path: C:\\temp; slash: \/; controls: \b\f\n\r\t; unicode: \u263a",
+    "i\u0064": "report"
+  }`;
+  assert.deepEqual(parseStrings(Buffer.from(source)), {
+    message: 'quote: "; path: C:\\temp; slash: /; controls: \b\f\n\r\t; unicode: ☺',
+    id: 'report',
+  });
+});
+
+test('flat string parsing rejects literals and non-string property values', () => {
+  for (const source of ['null', '42', 'true', '"text"', '[]', '{"id":42}', '{"id":null}', '{"id":true}', '{"id":[]}', '{"id":{}}']) {
+    assert.throws(() => parseStrings(Buffer.from(source)), /flat JSON object/);
+  }
+});
+
+test('overwritten non-string values reject job files before enqueue or state changes', async (t) => {
+  for (const firstValue of ['42', 'null', 'true', 'false', '[]', '{}', '{"nested":"value"}']) {
+    await t.test(firstValue, async (t) => {
+      const f = await fixture(t);
+      await f.enqueue(job('existing'));
+      const statePath = join(f.config.stateDirectory, 'state.json');
+      const before = await readFile(statePath);
+      const source = `{"id":${firstValue},${JSON.stringify(job('new-job')).slice(1)}`;
+      const inputPath = join(f.config.stateDirectory, 'invalid-job.json');
+      await writeFile(inputPath, source);
+      await assert.rejects(async () => f.enqueue(await readJob(inputPath)), /flat JSON object|Duplicate JSON/);
+      assert.equal(f.sent.length, 0);
+      assert.deepEqual(await readFile(statePath), before);
+    });
+  }
+});
+
 test('input files are copied into the queue; later edits cannot alter an accepted job', async (t) => {
   const f = await fixture(t);
   const path = join(f.config.stateDirectory, 'input.json');

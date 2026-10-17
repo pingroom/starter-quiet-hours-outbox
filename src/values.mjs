@@ -9,6 +9,10 @@ export const notificationId = (value) => typeof value === 'string' && /^[0-9a-f]
 export const exactKeys = (value, required, optional = []) => object(value) && required.every((key) => Object.hasOwn(value, key))
   && Object.keys(value).every((key) => [...required, ...optional].includes(key));
 
+const jsonString = String.raw`"(?:[^"\\\x00-\x1f]|\\["\\/bfnrt]|\\u[0-9a-fA-F]{4})*"`;
+const stringMember = String.raw`${jsonString}[ \t\r\n]*:[ \t\r\n]*${jsonString}`;
+const stringObject = new RegExp(String.raw`^[ \t\r\n]*\{[ \t\r\n]*(?:${stringMember}(?:[ \t\r\n]*,[ \t\r\n]*${stringMember})*)?[ \t\r\n]*\}[ \t\r\n]*$`);
+
 // Input jobs and configuration are flat string objects. Reject duplicate keys,
 // including escaped spellings, before a producer's accidental edit can be hidden.
 export function parseStrings(buffer) {
@@ -18,8 +22,9 @@ export function parseStrings(buffer) {
     source = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
     value = JSON.parse(source);
   } catch { throw new Error('Expected valid UTF-8 JSON.'); }
-  if (!object(value) || Object.values(value).some((item) => typeof item !== 'string')) throw new Error('Expected a flat JSON object containing only strings.');
-  const tokens = [...source.matchAll(/"(?:[^"\\]|\\[\s\S])*"/g)].map(([token]) => JSON.parse(token));
+  // Check the source: JSON.parse has already discarded overwritten values.
+  if (!stringObject.test(source)) throw new Error('Expected a flat JSON object containing only strings.');
+  const tokens = [...source.matchAll(new RegExp(jsonString, 'g'))].map(([token]) => JSON.parse(token));
   const keys = tokens.filter((_, index) => index % 2 === 0);
   if (new Set(keys).size !== keys.length) throw new Error('Duplicate JSON keys are not allowed.');
   return value;
