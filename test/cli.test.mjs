@@ -32,8 +32,9 @@ test('real CLI 0.12 sends a linked notification once and ignores an ambient webh
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     requests.push({ path: req.url, method: req.method, auth: req.headers.authorization, body: JSON.parse(Buffer.concat(chunks)) });
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ notification_id: ID, success: true }));
+    // The agent route answers 201 with the created notification row; its `id` is the notification ID.
+    res.writeHead(201, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ id: ID, type: 'sent' }));
   });
   const previous = process.env.PINGROOM_WEBHOOK_URL;
   process.env.PINGROOM_WEBHOOK_URL = `${connection.apiUrl}/must-not-use-ambient-webhook`;
